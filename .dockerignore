@@ -1,0 +1,7 @@
+.gitignore
+.jshintignore
+.nvmrc
+Dockerfile
+LICENSE
+README.md
+server/logs
