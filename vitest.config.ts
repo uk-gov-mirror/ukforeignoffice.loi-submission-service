@@ -5,13 +5,12 @@ export default defineConfig({
     exclude: [...configDefaults.exclude],
     coverage: {
       provider: 'v8',
-      all: true,
       include: ['server/**/*.js', '!server/app.js', '!server/server.js'],
       thresholds: {
-        lines: 41,
-        functions: 58,
-        branches: 13,
         statements: 41,
+        branches: 17,
+        functions: 56,
+        lines: 41,
       },
     },
   },

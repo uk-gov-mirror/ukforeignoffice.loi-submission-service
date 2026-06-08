@@ -1,26 +1,19 @@
 import { createLogger, format, transports } from 'winston'
 
-const { combine, timestamp, printf } = format
+const { combine, timestamp, simple, logstash, colorize } = format
+
+const nonProductionLogFormat = format.combine(colorize({ level: true }), format.splat(), simple())
+
+const productionLogstashFormat = combine(timestamp(), logstash())
+
+const customFormat = process.env.NODE_ENV === 'production' ? productionLogstashFormat : nonProductionLogFormat
 
 export const logger = createLogger({
-  transports: [
-    new transports.Console({
-      level: 'info',
-      format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        printf(({ level, message, timestamp, ..._rest }) => {
-          return `${level.toUpperCase()}: ${message}`
-        }),
-      ),
-    }),
-    new transports.Console({
-      level: 'error',
-      format: combine(
-        timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        printf(({ level, message, timestamp, ..._rest }) => {
-          return `${level.toUpperCase()}: ${message}`
-        }),
-      ),
-    }),
-  ],
+  level: process.env.LOG_LEVEL || 'info',
+  format: customFormat,
+  defaultMeta: { service: 'loi-submission-service' },
+  transports: [new transports.Console({ level: 'info', handleExceptions: true, handleRejections: true })],
+  exitOnError: false,
 })
+
+logger.info(process.env.NODE_ENV === 'production' ? 'Production logging enabled' : 'Development logging enabled')

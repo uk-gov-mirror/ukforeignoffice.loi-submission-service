@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./server/server.js",
+    "dev": "NODE_ENV=development node ./server/server.js",
     "test": "vitest run --coverage",
     "format": "biome check --write .",
     "quality": "biome check --changed --since=develop"
