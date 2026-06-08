@@ -42,6 +42,8 @@ describe('pollForAdditionalPaymentsController.checkForAdditionalPayments', () =>
     await checkForAdditionalPayments()
 
     expect(loggerErrorStub).toHaveBeenCalledOnce()
-    expect(loggerErrorStub).toHaveBeenCalledWith(expectedError)
+    expect(loggerErrorStub).toHaveBeenCalledWith('Error checking for eligible additional payments', {
+      error: expectedError,
+    })
   })
 })

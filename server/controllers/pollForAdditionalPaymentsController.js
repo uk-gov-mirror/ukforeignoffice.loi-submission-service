@@ -23,7 +23,7 @@ export const checkForAdditionalPayments = async () => {
     const results = await checkForEligibleAdditionalPayments()
     if (results) await processMessage(results.dataValues)
   } catch (error) {
-    logger.error(error)
+    logger.error('Error checking for additional payments', { error })
   }
 
   async function checkForEligibleAdditionalPayments() {
@@ -38,7 +38,7 @@ export const checkForAdditionalPayments = async () => {
         order: sequelize.random(),
       })
     } catch (error) {
-      logger.error(error)
+      logger.error('Error checking for eligible additional payments', { error })
     }
   }
 
@@ -57,18 +57,20 @@ export const checkForAdditionalPayments = async () => {
         const currentSubmissionAttempts = await getSubmissionAttempts(additionalPayment)
         const retryAttempts = currentSubmissionAttempts.submission_attempts + 1
 
-        logger.info(`maxRetryAttempts: ${maxRetryAttempts}`)
-        logger.info(`retryAttempts: ${retryAttempts}`)
+        logger.info(`Retry attempt ${retryAttempts} for ${additionalPayment.application_id}`, {
+          maxRetryAttempts,
+          retryAttempts,
+        })
 
         if (retryAttempts >= maxRetryAttempts) {
-          logger.info(`Retry Attempt limit reached`)
+          logger.info(`Retry Attempt limit reached for ${additionalPayment.application_id}`)
           await markPaymentAsFailed(additionalPayment, retryAttempts, response)
         } else {
           await updateSubmissionAttempts(additionalPayment, retryAttempts, response)
         }
       }
     } catch (error) {
-      logger.error(error)
+      logger.error('Error processing additional payment', { error })
     }
   }
 
@@ -86,7 +88,12 @@ export const checkForAdditionalPayments = async () => {
       }
       await updateSubmissionPayload(additionalPayment, payload)
     } catch (error) {
-      logger.error(error)
+      logger.error('Error generating payload and updating submission', {
+        applicationReference: additionalPayment.application_id,
+        reference: additionalPayment.payment_reference,
+        amount: additionalPayment.payment_amount,
+        error,
+      })
     }
   }
 
@@ -99,7 +106,10 @@ export const checkForAdditionalPayments = async () => {
         },
       })
     } catch (error) {
-      logger.error(error)
+      logger.error('Error getting submission payload', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 
@@ -110,7 +120,8 @@ export const checkForAdditionalPayments = async () => {
       const signal = controller.signal
       const edmsAdditionalPaymentUrl = `${config.edmsHost}/api/v1/paymentCapture`
       const edmsBearerToken = await HelperService.getEdmsAccessToken()
-      const startTime = new Date()
+
+      const profiler = logger.startTimer('Submitting additional payment to ORBIT')
 
       const response = await axios.post(edmsAdditionalPaymentUrl, payload, {
         headers: {
@@ -121,24 +132,34 @@ export const checkForAdditionalPayments = async () => {
         signal,
       })
 
-      const endTime = new Date()
-      const elapsedTime = endTime - startTime
+      profiler.done({
+        message: `Orbit payment capture request response time for ${additionalPayment.application_id}:`,
+        additionalPayment: additionalPayment.application_id,
+        ...logger.defaultMeta,
+      })
 
       if (response && response.status === 200) {
         logger.info(
           `Additional payment for ${additionalPayment.application_id} has been submitted to ORBIT successfully`,
         )
-        logger.info(`Orbit payment capture request response time: ${elapsedTime}ms`)
         return response.status
       } else {
         logger.error(
           `Failed to submit additional payment for ${additionalPayment.application_id}. Status code: ${response.status || 500}`,
+          {
+            applicationReference: additionalPayment.application_id,
+            responseStatusCode: response.status || 500,
+            response,
+          },
         )
         controller.abort()
         return response.status ? response.status : 500
       }
     } catch (error) {
-      logger.error(`Error submitting additional payment to ORBIT: ${error}`)
+      logger.error(`Error submitting additional payment to ORBIT for ${additionalPayment.application_id}`, {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
       return error.response ? error.response.status : 500
     }
   }
@@ -157,7 +178,10 @@ export const checkForAdditionalPayments = async () => {
         },
       )
     } catch (error) {
-      logger.error(error)
+      logger.error('Error updating submission payload', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 
@@ -177,7 +201,10 @@ export const checkForAdditionalPayments = async () => {
         },
       )
     } catch (error) {
-      logger.error(error)
+      logger.error('Error marking payment as submitted', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 
@@ -190,7 +217,10 @@ export const checkForAdditionalPayments = async () => {
         },
       })
     } catch (error) {
-      logger.error(error)
+      logger.error('Error getting submission attempts', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 
@@ -210,7 +240,10 @@ export const checkForAdditionalPayments = async () => {
         },
       )
     } catch (error) {
-      logger.error(error)
+      logger.error('Error marking payment as failed', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 
@@ -229,7 +262,10 @@ export const checkForAdditionalPayments = async () => {
         },
       )
     } catch (error) {
-      logger.error(error)
+      logger.error('Error updating submission attempts', {
+        applicationReference: additionalPayment.application_id,
+        error,
+      })
     }
   }
 }

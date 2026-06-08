@@ -75,7 +75,10 @@ describe('pollForApplications behavior', () => {
 
       expect(result).toBeUndefined()
       expect(loggerErrorStub).toHaveBeenCalledOnce()
-      expect(loggerErrorStub).toHaveBeenCalledWith('updateApplicationAsProcessing: Error: db down')
+      expect(loggerErrorStub).toHaveBeenCalledWith('Error in updateApplicationAsProcessing for 123', {
+        application_id: 123,
+        error: new Error('db down'),
+      })
     })
 
     it('placeBackInTheQueue logs and returns undefined on update error', async () => {
@@ -85,7 +88,10 @@ describe('pollForApplications behavior', () => {
 
       expect(result).toBeUndefined()
       expect(loggerErrorStub).toHaveBeenCalledOnce()
-      expect(loggerErrorStub).toHaveBeenCalledWith('placeBackInTheQueue: Error: db down')
+      expect(loggerErrorStub).toHaveBeenCalledWith('Error in placeBackInTheQueue for 123', {
+        application_id: 123,
+        error: new Error('db down'),
+      })
     })
   })
 })
